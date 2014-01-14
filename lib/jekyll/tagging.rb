@@ -54,16 +54,11 @@ module Jekyll
     #
     # [[<TAG>, <CLASS>], ...]
     def calculate_tag_cloud(num = 5)
-      range = 0
-
       tags = active_tags.map { |tag, posts|
-        [tag.to_s, range < (size = posts.size) ? range = size : size]
+        [tag.to_s, posts.size]
       }
 
-
-      range = 1..range
-
-      tags.sort!.map! { |tag, size| [tag, range.quantile(size, num)] }
+      tags.sort!{|a,b| a[1] <=> b[1]}
     end
 
     def active_tags
@@ -93,14 +88,17 @@ module Jekyll
   module Filters
 
     def tag_cloud(site)
-      active_tag_data.map { |tag, set|
-        tag_link(tag, tag_url(tag), :class => "set-#{set}")
+      active_tag_data.map { |tag, size|
+        tag_link(tag, tag_url(tag), size)
       }.join(' ')
     end
 
-    def tag_link(tag, url = tag_url(tag), html_opts = nil)
-      html_opts &&= ' ' << html_opts.map { |k, v| %Q{#{k}="#{v}"} }.join(' ')
-      %Q{<li><a href="#{url}"#{html_opts}>#{tag}</a></li>}
+    def tag_link(tag, url = tag_url(tag), size)
+      if size
+        %Q{<li><a href="#{url}">##{tag} (#{size})</a></li>}
+      else
+        %Q{<li><a href="#{url}">##{tag}</a></li>}
+      end
     end
 
     def tag_url(tag, type = :page, site = Tagger.site)
@@ -111,8 +109,8 @@ module Jekyll
     def tags(obj)
       tags = obj['tags'].dup
       tags.map! { |t| t.first } if tags.first.is_a?(Array)
-      tags.map! { |t| tag_link(t, tag_url(t), :rel => 'tag') if t.is_a?(String) }.compact!
-      tags.join(', ')
+      tags.map! { |t| tag_link(t, tag_url(t), nil) if t.is_a?(String) }.compact!
+      tags.join(' ')
     end
 
     def active_tag_data(site = Tagger.site)
