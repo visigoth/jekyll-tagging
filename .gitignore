@@ -3,3 +3,5 @@ doc.local
 pkg
 .gh-pages
 .jekyll
+Gemfile*
+.gem
