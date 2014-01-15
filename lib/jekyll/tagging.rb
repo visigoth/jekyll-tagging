@@ -58,7 +58,7 @@ module Jekyll
         [tag.to_s, posts.size]
       }
 
-      tags.sort!{|a,b| a[1] <=> b[1]}
+      tags.sort!{|a,b| b[1] <=> a[1]}
     end
 
     def active_tags
