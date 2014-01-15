@@ -4,4 +4,4 @@ pkg
 .gh-pages
 .jekyll
 Gemfile*
-.gem
+*.gem
