@@ -30,9 +30,10 @@ module Jekyll
     end
 
     def new_tag(tag, posts)
+      posts = posts.sort.reverse!
       self.class.types.each { |type|
         if layout = site.config["tag_#{type}_layout"]
-          data = { 'layout' => layout, 'posts' => posts.sort.reverse! }
+          data = { 'layout' => layout, 'posts' => posts }
 
           name = yield data if block_given?
 
