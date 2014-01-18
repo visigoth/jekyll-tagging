@@ -3,6 +3,18 @@ require 'erb'
 
 module Jekyll
 
+  class PagerFacade
+    attr_accessor :liquid
+
+    def initialize(d)
+      self.liquid = d
+    end
+
+    def to_liquid
+      return self.liquid
+    end
+  end
+
   class Tagger < Generator
 
     safe true
@@ -29,6 +41,18 @@ module Jekyll
       active_tags.each { |tag, posts| new_tag(tag, posts) }
     end
 
+    def generate_page_path(root, idx)
+        page_path = "/page/#{idx+1}/"
+      if idx == 0
+        page_path = "/"
+      end
+      return "#{root}#{page_path}"
+    end
+
+    def generate_page_url_path(type, root_path, idx)
+      return generate_page_path(site.config["tag_#{type}_dir"] + "/" + root_path, idx)
+    end
+
     def new_tag(tag, posts)
       posts = posts.sort.reverse!
       self.class.types.each { |type|
@@ -36,11 +60,48 @@ module Jekyll
           data = { 'layout' => layout, 'posts' => posts }
 
           name = yield data if block_given?
+          root_path = "#{name || tag}"
 
-          site.pages << TagPage.new(
-            site, site.source, site.config["tag_#{type}_dir"],
-            "#{name || tag}#{site.layouts[data['layout']].ext}", data
-          )
+          if type == :page
+            if site.config["paginate"]
+              slice_count = site.config["paginate"]
+              paged_posts = posts.each_slice(slice_count).to_a
+              paged_posts.each_index do |idx|
+
+                data = { 'layout' => layout, 'posts' => paged_posts[idx] }
+
+                paginator = {
+                  'page' => idx+1,
+                  'per_page' => slice_count,
+                  'posts' => paged_posts[idx],
+                  'total_posts' => posts.count,
+                  'total_pages' => paged_posts.count,
+                  'previous_page' => (idx == 0) ? nil : idx,
+                  'previous_page_path' => (idx == 0) ? nil : generate_page_url_path(type, root_path, idx-1),
+                  'next_page' => (idx+1 == paged_posts.count) ? nil : idx+1,
+                  'next_page_path' => (idx+1 == paged_posts.count) ? nil : generate_page_url_path(type, root_path, idx+1)
+                }
+                page_path = generate_page_path(root_path, idx)
+
+                tagpage = TagPage.new(
+                  site, site.source, site.config["tag_page_dir"],
+                  "#{page_path}", data
+                )
+                tagpage.pager = PagerFacade.new(paginator)
+                site.pages << tagpage
+              end
+            else
+              site.pages << TagPage.new(
+                site, site.source, site.config["tag_#{type}_dir"],
+                "#{root_path}#{site.layouts[data['layout']].ext}", data
+              )
+            end
+          else
+            site.pages << TagPage.new(
+              site, site.source, site.config["tag_#{type}_dir"],
+              "#{root_path}#{site.layouts[data['layout']].ext}", data
+            )
+          end
         end
       }
     end
